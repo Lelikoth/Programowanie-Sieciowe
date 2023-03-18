@@ -14,13 +14,20 @@
 
 int gniazdko = -1;
 
-bool drukowalne (const void* buf, size_t len) {
-    const char* b = buf;
-    for (size_t i = 0; i < len; i++) {
-        if (b[i] < 32 || b[i] > 126) {
+bool drukowalne (const void* buf, int len) {
+    
+    const char* _buf = buf;
+
+    for (int i = 0; i < len; i++) {
+        if(_buf[i] == '\n' || _buf[i] == '\t' || _buf[i] == '\r')
+        {
+            continue;
+        }
+        else if (_buf[i] < 32 || _buf[i] > 126) {
             return false;
         }
     }
+
     return true;
 }
 
@@ -38,10 +45,11 @@ int main(int argc, char const *argv[]){
 
     atexit(zamknij_gniazdko);
 
-    struct sockaddr_in* adres = malloc(sizeof(struct sockaddr_in));
-    adres->sin_family = AF_INET;
-    adres->sin_port = htons(port);
-    adres->sin_addr.s_addr = inet_addr(adres_ip);
+    struct sockaddr_in adres = {
+        .sin_family = AF_INET,
+        .sin_port = htons(port),
+        .sin_addr.s_addr = inet_addr(adres_ip)
+    };
 
     gniazdko = socket(AF_INET, SOCK_DGRAM, 0);
     if(gniazdko == -1){
@@ -49,20 +57,20 @@ int main(int argc, char const *argv[]){
         exit(1);
     }
 
-    if(sendto(gniazdko, "", 0, 0, (struct sockaddr*)adres, sizeof(struct sockaddr_in)) == -1){
+    if(sendto(gniazdko, "Hello World", 11, 0, (struct sockaddr*)&adres, sizeof(struct sockaddr_in)) == -1){
         printf("Nie udalo sie wyslac wiadomosci!\n");
         exit(1);
     }
 
-    char buf[1024];
+    char buf[32];
     socklen_t dlugosc_adresu = sizeof(adres);
 
-    if(recvfrom(gniazdko, buf, 1024, 0, (struct sockaddr*)adres, &dlugosc_adresu) == -1){
+    if(recvfrom(gniazdko, buf, 32, 0, (struct sockaddr*)&adres, &dlugosc_adresu) == -1){
         printf("Nie udalo sie odebrac wiadomosci!\n");
         exit(1);
     }
 
-    if(drukowalne(&buf, 1024)){
+    if(drukowalne(&buf, 12)){
         printf("%s\n", buf);
     }else{
         printf("Wiadomosc nie jest drukowalna!\n");

@@ -30,7 +30,11 @@ bool drukowalny (const void* buf, int len) {
     const char* _buf = buf;
 
     for (int i = 0; i < len; i++) {
-        if (_buf[i] < 32 || _buf[i] > 126) {
+        if(_buf[i] == '\n' || _buf[i] == '\t' || _buf[i] == '\r')
+        {
+            continue;
+        }
+        else if (_buf[i] < 32 || _buf[i] > 126) {
             return false;
         }
     }

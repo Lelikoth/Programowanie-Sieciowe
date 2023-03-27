@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <string.h>
 
 int gniazdko = -1;
 
@@ -40,8 +41,8 @@ void zamknij_gniazdko(){
 
 int main(int argc, char const *argv[]){
 
-    const char* adres_ip = argv[1];
-    int port = atoi(argv[2]);
+    const char* adres_ip = "127.0.0.1";
+    int port = 2020;
 
     atexit(zamknij_gniazdko);
 
@@ -57,28 +58,21 @@ int main(int argc, char const *argv[]){
         exit(1);
     }
 
-    if(sendto(gniazdko, "Hello World", 11, 0, (struct sockaddr*)&adres, sizeof(struct sockaddr_in)) == -1){
+    if(sendto(gniazdko, "123-23+1+\n", 10, 0, (struct sockaddr*)&adres, sizeof(struct sockaddr_in)) == -1){
         printf("Nie udalo sie wyslac wiadomosci!\n");
         exit(1);
     }
 
-    char buf[32];
+    char buf[40];
+    strcpy(buf, "");
     socklen_t dlugosc_adresu = sizeof(adres);
 
-    if(recvfrom(gniazdko, buf, 32, 0, (struct sockaddr*)&adres, &dlugosc_adresu) == -1){
+    if(recvfrom(gniazdko, buf, 40, 0, (struct sockaddr*)&adres, &dlugosc_adresu) == -1){
         printf("Nie udalo sie odebrac wiadomosci!\n");
         exit(1);
     }
 
-    if(drukowalne(&buf, 12)){
-        printf("%s\n", buf);
-    }else{
-        printf("Wiadomosc nie jest drukowalna!\n");
-        exit(1);
-    }
-
-    if(close(gniazdko) == -1){
-        printf("Nie udalo sie zamknac gniazda!\n");
-        exit(1);
+    for (int i = 0; i < 40; i++) {
+        printf("%c ", buf[i]);
     }
 }

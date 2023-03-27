@@ -56,10 +56,11 @@ int main(){
         //bufor na dane
         char buf[MAX_DATA+1];
         buf[MAX_DATA] = '\n';
-        unsigned long int suma = 0;
+        long long suma = 0;
         char odczytana_liczba[MAX_DATA];
         bool netcat = false;
         bool blad = false;
+        bool znak = true;
 
         //ramka
         if(recvfrom(gniazdko, buf, sizeof(buf), 0, (struct sockaddr*)&klient, &klient_rozmiar) == -1){
@@ -67,32 +68,61 @@ int main(){
             exit(1);
         }
 
+        //check if datagram is empty
+        if(buf[0] == '\n'){
+            blad = true;
+        }
+
         //odebranie danych
         for(int i = 0, j = 0; i < MAX_DATA; i++){
+            
+            //sprawdzenie czy liczba nie zaczyna sie od znaku + lub -
+            if(buf[0] == '-' || buf[0] == '+')
+            {
+                blad = true;
+                break;
+            } else
 
             //znak konca liczby spacja, \n, \r\n
-            if(buf[i] == ' ' || buf[i] == '\n' || buf[i] == '\r'){
+            if(buf[i] == '\n' || buf[i] == '\r' || buf[i] == '+' || buf[i] == '-'){
                 odczytana_liczba[j] = '\0';
 
-                unsigned long int liczba = strtoul(odczytana_liczba, NULL, 10);
-                //sprwadzenie czy liczba została poprawnie przekonwertowana
-                unsigned long int test = liczba;
-                for(int k = j - 1; k >= 0; k--){
-                    if(odczytana_liczba[k] != (test % 10) + '0'){
-                        blad = true;
-                        break;
-                    }
-                    test /= 10;
-                }
-
-                //sprawdzenie czy liczba mieści się w typie int
-                if(suma > suma + liczba || blad == true){
+                //konwersja liczby z char na long int
+                long long liczba = strtoll(odczytana_liczba, NULL, 10);
+                //obsluga bledu strtoul
+                if(liczba == LLONG_MAX){
                     blad = true;
                     break;
                 }
 
-                suma += liczba;
+                //sprawdzenie czy liczba mieści się w typie int
+                //dodawanie lub odejmowanie liczby
+                if(znak == true){
+                    
+                    if(suma > suma + liczba || blad == true){
+                    blad = true;
+                    break;
+                    }
+                    suma += liczba;
+                }
+                else{
+                    if(suma < suma - liczba || blad == true){
+                    blad = true;
+                    break;
+                    }
+                    suma -= liczba;
+                }
                 j = 0;
+
+                //znak liczby + lub -
+                if(buf[i] == '+')
+                {
+                    znak = true;
+                }
+                else if(buf[i] == '-')
+                {
+                    znak = false;
+                }
 
                 //jesli zakonczenie lini \n to netcat
                 if(buf[i] == '\n'){
@@ -100,10 +130,12 @@ int main(){
                     break;
                 }
             }
+            //jesli zakonczenie lini \r\n to netcat
             else if(buf[i] == '\n' || (buf[i] == '\r' && buf[i+1] == '\n')){
                 netcat = true;
                 break;
             }
+            //sprawdzenie czy liczba składa się tylko z cyfr
             else if (buf[i] >= '0' && buf[i] <= '9'){
                 odczytana_liczba[j] = buf[i];
                 j++;
@@ -119,13 +151,14 @@ int main(){
             }
         }
 
+        //wyslanie odpowiedzi
         if(!blad){
             int dlugosc_odpowiedz = 0;
             if(netcat){
-                dlugosc_odpowiedz = sprintf(odczytana_liczba, "%ld\n", suma);
+                dlugosc_odpowiedz = sprintf(odczytana_liczba, "%lld\n", suma);
             }
             else{
-                dlugosc_odpowiedz = sprintf(odczytana_liczba, "%ld", suma);
+                dlugosc_odpowiedz = sprintf(odczytana_liczba, "%lld", suma);
             }
 
             if(sendto(gniazdko, odczytana_liczba, dlugosc_odpowiedz, 0, (struct sockaddr*)&klient, klient_rozmiar) == -1){

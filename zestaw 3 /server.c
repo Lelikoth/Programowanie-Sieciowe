@@ -33,7 +33,7 @@ int main(){
 
     struct sockaddr_in adres = {
         .sin_family = AF_INET,
-        .sin_port = htons(2020),
+        .sin_port = htons(20202),
         .sin_addr.s_addr = htonl(INADDR_ANY)
     };
 
@@ -63,10 +63,20 @@ int main(){
         bool znak = true;
 
         //ramka
-        if(recvfrom(gniazdko, buf, sizeof(buf), 0, (struct sockaddr*)&klient, &klient_rozmiar) == -1){
+        int fix = recvfrom(gniazdko, buf, sizeof(buf), 0, (struct sockaddr*)&klient, &klient_rozmiar);
+        if(fix == -1){
             printf("Nie udalo sie odebrac danych!\n");
             exit(1);
         }
+        
+        if(buf[fix-1] == '\r')
+        {
+        	blad=true;
+     	}
+     	else
+     	{
+		buf[fix] = '\n';
+     	}
 
         //check if datagram is empty
         if(buf[0] == '\n'){
@@ -83,9 +93,17 @@ int main(){
                 break;
             } else
 
-            //znak konca liczby spacja, \n, \r\n
+            //znak konca liczby \n, \r\n
             if(buf[i] == '\n' || buf[i] == '\r' || buf[i] == '+' || buf[i] == '-'){
                 odczytana_liczba[j] = '\0';
+                
+                if(buf[i]=='\n' && buf[i+1]=='\r')
+                {
+                	blad=true;
+                	break;
+                }
+                
+                
 
                 //konwersja liczby z char na long int
                 long long liczba = strtoll(odczytana_liczba, NULL, 10);
@@ -139,11 +157,6 @@ int main(){
             else if (buf[i] >= '0' && buf[i] <= '9'){
                 odczytana_liczba[j] = buf[i];
                 j++;
-                //sprawdzenie czy liczba nie jest za dluga
-                if(j > 10){
-                    blad = true;
-                    break;
-                }
             }
             else{
                 blad = true;
@@ -155,7 +168,7 @@ int main(){
         if(!blad){
             int dlugosc_odpowiedz = 0;
             if(netcat){
-                dlugosc_odpowiedz = sprintf(odczytana_liczba, "%lld\n", suma);
+                dlugosc_odpowiedz = sprintf(odczytana_liczba, "%lld", suma);
             }
             else{
                 dlugosc_odpowiedz = sprintf(odczytana_liczba, "%lld", suma);
@@ -167,7 +180,7 @@ int main(){
             }
         }
         else{
-            if(sendto(gniazdko, "ERROR\n", 6, 0, (struct sockaddr*)&klient, klient_rozmiar) == -1){
+            if(sendto(gniazdko, "ERROR", 6, 0, (struct sockaddr*)&klient, klient_rozmiar) == -1){
                 printf("Nie udalo sie wyslac danych!\n");
                 exit(1);
             }
